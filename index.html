@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nyp · Auth</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+        body{min-height:100vh;background:#0a0a0a;display:flex;justify-content:center;align-items:center;margin:0;padding:20px}
+        .app-container{width:100%;max-width:900px;background:radial-gradient(ellipse at 50%0%,#1a1a1a 0%,#0a0a0a 100%);border-radius:40px;box-shadow:0 60px 120px rgba(0,0,0,0.9),0 0 0 1px rgba(255,255,255,0.04);overflow:hidden;border:1px solid rgba(255,255,255,0.03);min-height:580px;position:relative}
+        .app-header{background:rgba(18,18,18,0.95);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.04)}
+        .header-left{display:flex;align-items:center;gap:12px}
+        .header-icon{color:#f0f0f0;width:24px;height:24px}
+        .header-title{font-weight:800;font-size:1.1rem;color:#f0f0f0}
+        .header-badge{font-size:0.55rem;color:rgba(255,255,255,0.15);padding:3px 10px;border-radius:20px;border:1px solid rgba(255,255,255,0.04)}
+        .btn-admin{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);color:#aaa;padding:6px 14px;border-radius:8px;font-size:.75rem;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;display:flex;align-items:center;gap:6px}
+        .btn-admin:hover{color:#fff;background:rgba(255,255,255,0.06)}
+        .btn-admin svg{width:16px;height:16px}
+        .btn-logout{background:transparent;border:none;color:#666;padding:6px 12px;border-radius:8px;font-size:.75rem;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;display:flex;align-items:center;gap:6px}
+        .btn-logout:hover{color:#ff6b6b;background:rgba(255,80,80,0.05)}
+        .btn-logout svg{width:16px;height:16px}
+        .app-body{padding:40px 32px 32px;min-height:450px}
+        .page-auth{max-width:400px;margin:0 auto}
+        .page-auth.hidden{display:none}
+        .auth-header{text-align:center;margin-bottom:28px}
+        .auth-header .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.04);padding:3px 14px;border-radius:20px;font-size:.55rem;color:rgba(255,255,255,0.2);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+        .auth-header .badge svg{width:12px;height:12px}
+        .auth-header h2{color:#f0f0f0;font-size:1.5rem;font-weight:800}
+        .auth-header h2 span{background:linear-gradient(135deg,#888,#eee);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .auth-header p{color:#5a5a5a;font-size:.8rem;margin-top:4px}
+        .auth-form{display:flex;flex-direction:column;gap:14px}
+        .input-group{display:flex;flex-direction:column;gap:4px}
+        .input-group label{font-size:.6rem;font-weight:600;color:#8a8a8a;letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+        .input-group label svg{width:14px;height:14px}
+        .input-wrapper{background:rgba(255,255,255,0.02);border:1.5px solid rgba(255,255,255,0.06);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;transition:all .3s}
+        .input-wrapper:focus-within{border-color:rgba(255,255,255,0.15)}
+        .input-wrapper .input-icon{color:#4a4a4a;width:18px;height:18px;flex-shrink:0}
+        .input-wrapper:focus-within .input-icon{color:#b0b0b0}
+        .input-wrapper input{width:100%;border:none;background:transparent;font-size:.85rem;color:#f0f0f0;outline:none;font-family:'Inter',sans-serif}
+        .input-wrapper input::placeholder{color:#3a3a3a}
+        .auth-btn{width:100%;background:linear-gradient(135deg,#1a1a1a,#2a2a2a);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px;color:#f0f0f0;font-weight:700;font-size:.85rem;cursor:pointer;transition:all .3s;font-family:'Inter',sans-serif;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px}
+        .auth-btn:hover{background:linear-gradient(135deg,#252525,#333);border-color:rgba(255,255,255,0.08);transform:translateY(-1px)}
+        .auth-btn:active{transform:scale(.97)}
+        .auth-btn svg{width:18px;height:18px}
+        .auth-msg{text-align:center;font-size:.75rem;padding:6px;border-radius:6px;margin-top:4px}
+        .auth-msg.error{color:#ff6b6b;background:rgba(255,80,80,0.05)}
+        .auth-msg.success{color:#4a8a5a;background:rgba(74,138,90,0.05)}
+        .page-admin{display:none}
+        .page-admin.active{display:block}
+        .admin-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+        .admin-header h2{color:#f0f0f0;font-size:1.2rem;font-weight:800;display:flex;align-items:center;gap:8px}
+        .admin-header h2 svg{width:22px;height:22px;color:#5a5a5a}
+        .admin-stats{display:flex;gap:12px;flex-wrap:wrap}
+        .stat-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:10px 16px;min-width:70px}
+        .stat-card .num{color:#f0f0f0;font-size:1.2rem;font-weight:700}
+        .stat-card .label{color:#5a5a5a;font-size:.55rem;text-transform:uppercase;letter-spacing:.3px}
+        .time-selector{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:rgba(255,255,255,0.01);padding:12px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);margin-bottom:14px}
+        .time-selector label{color:#8a8a8a;font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.3px;display:flex;align-items:center;gap:6px}
+        .time-selector label svg{width:14px;height:14px}
+        .time-selector input{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:4px 8px;color:#f0f0f0;width:50px;font-size:.8rem;font-family:'Inter',sans-serif;outline:none}
+        .time-selector input:focus{border-color:rgba(255,255,255,0.15)}
+        .time-selector span{color:#5a5a5a;font-size:.65rem}
+        .admin-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+        .admin-actions .action-btn{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:8px;padding:8px 14px;color:#aaa;font-weight:600;font-size:.75rem;cursor:pointer;transition:all .3s;font-family:'Inter',sans-serif;display:flex;align-items:center;gap:6px}
+        .admin-actions .action-btn:hover{background:rgba(255,255,255,0.05);color:#fff}
+        .admin-actions .action-btn svg{width:16px;height:16px}
+        .admin-actions .action-btn.danger:hover{background:rgba(255,80,80,0.08);color:#ff6b6b}
+        .admin-actions .action-btn.primary:hover{background:rgba(74,138,90,0.08);color:#4a8a5a}
+        .key-list{background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.03);border-radius:10px;overflow:hidden;max-height:350px;overflow-y:auto}
+        .key-item{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.03);flex-wrap:wrap;gap:6px}
+        .key-item:last-child{border-bottom:none}
+        .key-code{color:#f0f0f0;font-weight:600;font-size:.8rem;font-family:'Courier New',monospace}
+        .key-meta{color:#5a5a5a;font-size:.65rem;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+        .key-meta svg{width:12px;height:12px;display:inline-block;vertical-align:middle}
+        .key-status{font-size:.6rem;padding:1px 10px;border-radius:20px;display:flex;align-items:center;gap:4px}
+        .key-status.valid{color:#4a8a5a;background:rgba(74,138,90,0.1)}
+        .key-status.expired{color:#ff6b6b;background:rgba(255,80,80,0.1)}
+        .key-status.used{color:#ffa500;background:rgba(255,165,0,0.1)}
+        .key-status svg{width:12px;height:12px}
+        .key-actions button{background:transparent;border:none;color:#555;padding:2px 6px;border-radius:4px;cursor:pointer;transition:all .2s;display:flex;align-items:center}
+        .key-actions button:hover{color:#ff6b6b;background:rgba(255,80,80,0.05)}
+        .key-actions button svg{width:16px;height:16px}
+        .empty-state{text-align:center;padding:30px 20px;color:#5a5a5a}
+        .empty-state svg{width:40px;height:40px;color:#3a3a3a;margin-bottom:8px}
+        .empty-state p{font-size:.8rem}
+        .admin-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:999;justify-content:center;align-items:center}
+        .admin-modal.active{display:flex}
+        .admin-modal-box{background:#1a1a1a;border-radius:20px;padding:32px;max-width:380px;width:90%;border:1px solid rgba(255,255,255,0.04)}
+        .admin-modal-box h3{color:#f0f0f0;font-size:1.1rem;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+        .admin-modal-box h3 svg{width:20px;height:20px}
+        .admin-modal-box p{color:#5a5a5a;font-size:.75rem;margin-bottom:16px}
+        .admin-modal-box .input-group{margin-bottom:10px}
+        .admin-modal-box .auth-btn{margin-top:2px}
+        .footer-text{text-align:center;color:#2a2a2a;font-size:.5rem;padding:12px 24px;border-top:1px solid rgba(255,255,255,0.02)}
+        @media(max-width:600px){.app-body{padding:24px 16px 20px}.admin-header{flex-direction:column;align-items:stretch}.admin-stats{justify-content:center}.key-item{flex-wrap:wrap}.time-selector{flex-direction:column;align-items:stretch}}
+        ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:3px}
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="app-header">
+        <div class="header-left">
+            <i data-lucide="loader-circle" class="header-icon"></i>
+            <span class="header-title">Nyp·Auth</span>
+            <span class="header-badge">v3.0</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <button class="btn-admin" id="adminBtn"><i data-lucide="shield"></i> Admin</button>
+            <button class="btn-logout" id="logoutBtn" style="display:none"><i data-lucide="log-out"></i> Logout</button>
+        </div>
+    </div>
+    <div class="app-body">
+        <!-- REGISTER -->
+        <div class="page-auth" id="pageAuth">
+            <div class="auth-header">
+                <div class="badge"><i data-lucide="key"></i> Register</div>
+                <h2>Create Your <span>Account</span></h2>
+                <p>Enter your details and a valid key</p>
+            </div>
+            <div class="auth-form">
+                <div class="input-group">
+                    <label><i data-lucide="user"></i> Username</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="user" class="input-icon"></i>
+                        <input type="text" id="regUser" placeholder="Choose a username">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label><i data-lucide="lock"></i> Password</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="lock" class="input-icon"></i>
+                        <input type="password" id="regPass" placeholder="Create a password">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label><i data-lucide="key"></i> Registration Key</label>
+                    <div class="input-wrapper">
+                        <i data-lucide="key" class="input-icon"></i>
+                        <input type="text" id="regKey" placeholder="Enter your registration key">
+                    </div>
+                </div>
+                <button class="auth-btn" id="registerBtn"><i data-lucide="user-plus"></i> Register</button>
+                <div class="auth-msg" id="regMsg"></div>
+            </div>
+        </div>
+        <!-- ADMIN -->
+        <div class="page-admin" id="pageAdmin">
+            <div class="admin-header">
+                <h2><i data-lucide="shield"></i> Admin Panel</h2>
+                <div class="admin-stats">
+                    <div class="stat-card"><div class="num" id="totalKeys">0</div><div class="label">Total</div></div>
+                    <div class="stat-card"><div class="num" id="validKeys">0</div><div class="label">Valid</div></div>
+                    <div class="stat-card"><div class="num" id="usedKeys">0</div><div class="label">Used</div></div>
+                    <div class="stat-card"><div class="num" id="expiredKeys">0</div><div class="label">Expired</div></div>
+                </div>
+            </div>
+            <div class="time-selector">
+                <label><i data-lucide="clock"></i> Validity:</label>
+                <input type="number" id="keyDays" value="30" min="1" max="365"><span>days</span>
+                <input type="number" id="keyHours" value="0" min="0" max="23"><span>hrs</span>
+                <input type="number" id="keyMinutes" value="0" min="0" max="59"><span>min</span>
+            </div>
+            <div class="admin-actions">
+                <button class="action-btn primary" id="genKeyBtn"><i data-lucide="plus"></i> Generate</button>
+                <button class="action-btn danger" id="clearKeysBtn"><i data-lucide="trash-2"></i> Clear</button>
+                <button class="action-btn" id="refreshKeysBtn"><i data-lucide="refresh-cw"></i> Refresh</button>
+            </div>
+            <div class="key-list" id="keyList">
+                <div class="empty-state"><i data-lucide="key" style="width:40px;height:40px;color:#3a3a3a;display:block;margin:0 auto 8px;"></i><p>No keys generated yet</p></div>
+            </div>
+        </div>
+    </div>
+    <div class="footer-text">Nyp Auth System v3.0 • All rights reserved</div>
+</div>
+<!-- ADMIN MODAL -->
+<div class="admin-modal" id="adminModal">
+    <div class="admin-modal-box">
+        <h3><i data-lucide="shield"></i> Admin Access</h3>
+        <p>Enter your credentials to access the admin panel</p>
+        <div class="input-group">
+            <label><i data-lucide="user"></i> Username</label>
+            <div class="input-wrapper">
+                <i data-lucide="user" class="input-icon"></i>
+                <input type="text" id="adminUser" placeholder="Admin username">
+            </div>
+        </div>
+        <div class="input-group">
+            <label><i data-lucide="lock"></i> Password</label>
+            <div class="input-wrapper">
+                <i data-lucide="lock" class="input-icon"></i>
+                <input type="password" id="adminPass" placeholder="Admin password">
+            </div>
+        </div>
+        <button class="auth-btn" id="adminLoginBtn"><i data-lucide="log-in"></i> Login</button>
+        <div class="auth-msg" id="adminMsg"></div>
+    </div>
+</div>
+<script>
+// ================================================================
+// SISTEMA COMPLETO - LUCIDE ICONS
+// ================================================================
+(function(){
+    'use strict';
+    
+    // Inicializar Lucide
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+    
+    // CONFIG
+    var ADMIN_USER = 'nypadmin';
+    var ADMIN_PASS = 'Nyp@2024#Secure';
+    var KEY_STORAGE = 'NypKeys';
+    var USER_STORAGE = 'NypUsers';
+    var ADMIN_STORAGE = 'NypAdmins';
+    
+    // ===== STORAGE =====
+    function getKeys(){
+        try{
+            var data = localStorage.getItem(KEY_STORAGE);
+            return data ? JSON.parse(data) : [];
+        }catch(e){ return []; }
+    }
+    function saveKeys(keys){
+        try{
+            localStorage.setItem(KEY_STORAGE, JSON.stringify(keys));
+        }catch(e){}
+    }
+    function getUsers(){
+        try{
+            var data = localStorage.getItem(USER_STORAGE);
+            return data ? JSON.parse(data) : {};
+        }catch(e){ return {}; }
+    }
+    function saveUsers(users){
+        try{
+            localStorage.setItem(USER_STORAGE, JSON.stringify(users));
+        }catch(e){}
+    }
+    function isAdmin(){
+        try{
+            return localStorage.getItem(ADMIN_STORAGE) === 'true';
+        }catch(e){ return false; }
+    }
+    function setAdmin(val){
+        try{
+            localStorage.setItem(ADMIN_STORAGE, val ? 'true' : 'false');
+        }catch(e){}
+    }
+    
+    // ===== KEY FUNCTIONS =====
+    function generateKey(days, hours, minutes){
+        var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        var key = '';
+        for(var i=0; i<20; i++){
+            key += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        var now = new Date();
+        var expire = new Date(now.getTime() + (days*24*60*60*1000) + (hours*60*60*1000) + (minutes*60*1000));
+        return {
+            key: key,
+            created: now.toISOString(),
+            expires: expire.toISOString(),
+            used: false,
+            usedBy: null
+        };
+    }
+    function isExpired(date){
+        return new Date(date) < new Date();
+    }
+    function getStatus(key){
+        if(key.used) return 'used';
+        if(isExpired(key.expires)) return 'expired';
+        return 'valid';
+    }
+    
+    // ===== RENDER =====
+    function renderKeys(){
+        var keys = getKeys();
+        var list = document.getElementById('keyList');
+        var total = document.getElementById('totalKeys');
+        var valid = document.getElementById('validKeys');
+        var used = document.getElementById('usedKeys');
+        var expired = document.getElementById('expiredKeys');
+        
+        var v=0, u=0, e=0;
+        keys.forEach(function(k){
+            var s = getStatus(k);
+            if(s==='valid') v++;
+            else if(s==='used') u++;
+            else if(s==='expired') e++;
+        });
+        total.textContent = keys.length;
+        valid.textContent = v;
+        used.textContent = u;
+        expired.textContent = e;
+        
+        if(keys.length===0){
+            list.innerHTML = '<div class="empty-state"><i data-lucide="key" style="width:40px;height:40px;color:#3a3a3a;display:block;margin:0 auto 8px;"></i><p>No keys generated yet</p></div>';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            return;
+        }
+        var html = '';
+        keys.forEach(function(k, i){
+            var status = getStatus(k);
+            var label = status==='valid'?'Valid':status==='used'?'Used':'Expired';
+            var cls = status;
+            var icon = status==='valid'?'check-circle':status==='used'?'clock':'x-circle';
+            html += '<div class="key-item">';
+            html += '<div class="key-info">';
+            html += '<div class="key-code">'+k.key+'</div>';
+            html += '<div class="key-meta">';
+            html += '<span><i data-lucide="calendar" style="width:12px;height:12px;display:inline-block;vertical-align:middle;"></i> '+new Date(k.created).toLocaleDateString()+'</span>';
+            html += '<span><i data-lucide="clock" style="width:12px;height:12px;display:inline-block;vertical-align:middle;"></i> '+new Date(k.expires).toLocaleDateString()+'</span>';
+            if(k.usedBy) html += '<span><i data-lucide="user" style="width:12px;height:12px;display:inline-block;vertical-align:middle;"></i> '+k.usedBy+'</span>';
+            html += '</div></div>';
+            html += '<div class="key-status '+cls+'"><i data-lucide="'+icon+'" style="width:12px;height:12px;"></i> '+label+'</div>';
+            html += '<div class="key-actions">';
+            html += '<button onclick="window.deleteKey('+i+')"><i data-lucide="x"></i></button>';
+            html += '</div></div>';
+        });
+        list.innerHTML = html;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+    
+    window.deleteKey = function(index){
+        var keys = getKeys();
+        keys.splice(index, 1);
+        saveKeys(keys);
+        renderKeys();
+    };
+    
+    // ===== ADMIN MODAL =====
+    function showModal(){
+        document.getElementById('adminModal').classList.add('active');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+    function hideModal(){
+        document.getElementById('adminModal').classList.remove('active');
+        document.getElementById('adminMsg').textContent = '';
+        document.getElementById('adminMsg').className = 'auth-msg';
+    }
+    function adminLogin(){
+        var user = document.getElementById('adminUser').value.trim();
+        var pass = document.getElementById('adminPass').value.trim();
+        var msg = document.getElementById('adminMsg');
+        if(!user || !pass){
+            msg.className = 'auth-msg error';
+            msg.textContent = 'Fill in all fields';
+            return;
+        }
+        if(user === ADMIN_USER && pass === ADMIN_PASS){
+            setAdmin(true);
+            msg.className = 'auth-msg success';
+            msg.textContent = 'Login successful!';
+            setTimeout(function(){
+                hideModal();
+                document.getElementById('pageAuth').classList.add('hidden');
+                document.getElementById('pageAdmin').classList.add('active');
+                document.getElementById('logoutBtn').style.display = 'flex';
+                renderKeys();
+            }, 500);
+        }else{
+            msg.className = 'auth-msg error';
+            msg.textContent = 'Invalid credentials';
+        }
+    }
+    function adminLogout(){
+        setAdmin(false);
+        document.getElementById('pageAdmin').classList.remove('active');
+        document.getElementById('pageAuth').classList.remove('hidden');
+        document.getElementById('logoutBtn').style.display = 'none';
+    }
+    
+    // ===== REGISTER =====
+    function registerUser(){
+        var user = document.getElementById('regUser').value.trim();
+        var pass = document.getElementById('regPass').value.trim();
+        var key = document.getElementById('regKey').value.trim();
+        var msg = document.getElementById('regMsg');
+        
+        if(!user || !pass || !key){
+            msg.className = 'auth-msg error';
+            msg.textContent = 'Please fill in all fields';
+            return;
+        }
+        var keys = getKeys();
+        var found = false;
+        var idx = -1;
+        keys.forEach(function(k, i){
+            if(k.key === key && !k.used && !isExpired(k.expires)){
+                found = true;
+                idx = i;
+            }
+        });
+        if(!found){
+            msg.className = 'auth-msg error';
+            msg.textContent = 'Invalid or expired key';
+            return;
+        }
+        var users = getUsers();
+        if(users[user]){
+            msg.className = 'auth-msg error';
+            msg.textContent = 'Username already exists';
+            return;
+        }
+        users[user] = {
+            password: pass,
+            registered: new Date().toISOString()
+        };
+        saveUsers(users);
+        keys[idx].used = true;
+        keys[idx].usedBy = user;
+        saveKeys(keys);
+        msg.className = 'auth-msg success';
+        msg.textContent = 'Account created successfully!';
+        setTimeout(function(){
+            document.getElementById('regUser').value = '';
+            document.getElementById('regPass').value = '';
+            document.getElementById('regKey').value = '';
+            msg.textContent = '';
+            msg.className = 'auth-msg';
+            renderKeys();
+        }, 1500);
+    }
+    
+    // ===== EVENT LISTENERS =====
+    document.addEventListener('DOMContentLoaded', function(){
+        // Admin button
+        document.getElementById('adminBtn').addEventListener('click', function(){
+            if(isAdmin()){
+                document.getElementById('pageAuth').classList.add('hidden');
+                document.getElementById('pageAdmin').classList.add('active');
+                document.getElementById('logoutBtn').style.display = 'flex';
+                renderKeys();
+            }else{
+                showModal();
+            }
+        });
+        
+        // Admin login
+        document.getElementById('adminLoginBtn').addEventListener('click', adminLogin);
+        
+        // Close modal on Enter key
+        document.getElementById('adminPass').addEventListener('keydown', function(e){
+            if(e.key === 'Enter') adminLogin();
+        });
+        document.getElementById('adminUser').addEventListener('keydown', function(e){
+            if(e.key === 'Enter') adminLogin();
+        });
+        
+        // Close modal on background click
+        document.getElementById('adminModal').addEventListener('click', function(e){
+            if(e.target === this) hideModal();
+        });
+        
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', adminLogout);
+        
+        // Register
+        document.getElementById('registerBtn').addEventListener('click', registerUser);
+        
+        // Register on Enter key
+        document.getElementById('regKey').addEventListener('keydown', function(e){
+            if(e.key === 'Enter') registerUser();
+        });
+        document.getElementById('regPass').addEventListener('keydown', function(e){
+            if(e.key === 'Enter') registerUser();
+        });
+        document.getElementById('regUser').addEventListener('keydown', function(e){
+            if(e.key === 'Enter') registerUser();
+        });
+        
+        // Generate key
+        document.getElementById('genKeyBtn').addEventListener('click', function(){
+            if(!isAdmin()) return;
+            var days = parseInt(document.getElementById('keyDays').value) || 30;
+            var hours = parseInt(document.getElementById('keyHours').value) || 0;
+            var minutes = parseInt(document.getElementById('keyMinutes').value) || 0;
+            var keys = getKeys();
+            keys.push(generateKey(days, hours, minutes));
+            saveKeys(keys);
+            renderKeys();
+        });
+        
+        // Clear keys
+        document.getElementById('clearKeysBtn').addEventListener('click', function(){
+            if(!isAdmin()) return;
+            if(confirm('Delete all keys?')){
+                saveKeys([]);
+                renderKeys();
+            }
+        });
+        
+        // Refresh
+        document.getElementById('refreshKeysBtn').addEventListener('click', function(){
+            if(!isAdmin()) return;
+            renderKeys();
+        });
+        
+        // Check if already admin
+        if(isAdmin()){
+            document.getElementById('pageAuth').classList.add('hidden');
+            document.getElementById('pageAdmin').classList.add('active');
+            document.getElementById('logoutBtn').style.display = 'flex';
+            renderKeys();
+        }
+        
+        // Re-init Lucide after any changes
+        var observer = new MutationObserver(function(){
+            if (typeof lucide !== 'undefined') {
+                setTimeout(function(){ lucide.createIcons(); }, 50);
+            }
+        });
+        observer.observe(document.getElementById('pageAdmin'), { attributes: true, attributeFilter: ['class'] });
+        observer.observe(document.getElementById('pageAuth'), { attributes: true, attributeFilter: ['class'] });
+        observer.observe(document.getElementById('adminModal'), { attributes: true, attributeFilter: ['class'] });
+    });
+})();
+</script>
+</body>
+</html>
