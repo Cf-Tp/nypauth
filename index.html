@@ -64,7 +64,7 @@
         .stat-card .num.active{color:#4a8a5a}
         .stat-card .num.expired{color:#ff6b6b}
         .stat-card .num.used{color:#4a8aaa}
-        .key-list{max-height:160px;overflow-y:auto;margin-top:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03)}
+        .key-list{max-height:200px;overflow-y:auto;margin-top:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03)}
         .key-list::-webkit-scrollbar{width:3px}
         .key-list::-webkit-scrollbar-track{background:rgba(255,255,255,0.02);border-radius:10px}
         .key-list::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:10px}
@@ -316,24 +316,39 @@
 (function(){'use strict';if(typeof lucide!=='undefined')lucide.createIcons();
 
 // ============================================================
-// WEBHOOK DISCORD
+// WEBHOOK DISCORD - COM EMBED ORGANIZADO
 // ============================================================
 const WEBHOOK_URL = 'https://discord.com/api/webhooks/1527459440167485621/m2vn3K3jM4OwiTcKQKcYScw9j4l2NTz2-zKwy1YkdeCaoUxcJG8fXH5vyXVdNASgJXTi';
 
 async function sendLog(action, details) {
     try {
         console.log('Sending log:', action, details);
-        const timestamp = new Date().toLocaleString();
-        let message = '**[' + action + ']**\n🕐 ' + timestamp + '\n';
+        const timestamp = new Date().toISOString();
+        
+        // Montar descrição
+        let description = '**Action:** ' + action + '\n';
         Object.entries(details).forEach(function(item) {
-            message += '📌 ' + item[0] + ': ' + item[1] + '\n';
+            description += '**' + item[0] + ':** ' + item[1] + '\n';
         });
-        message += '\n';
+
+        const payload = {
+            embeds: [{
+                title: 'Nyp Auth Log',
+                color: 0x2B2D31,
+                description: description,
+                timestamp: timestamp,
+                footer: {
+                    text: 'Nyp Auth v3.0'
+                }
+            }]
+        };
+
         const response = await fetch(WEBHOOK_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: message })
+            body: JSON.stringify(payload)
         });
+
         if (!response.ok) {
             console.error('Webhook error:', response.status);
         }
@@ -381,11 +396,10 @@ function aB(){
             var h=aA(g),i={active:'Active',expired:'Expired',used:'Used'};
             var j=document.createElement('div');j.className='key-item';
             var expiryText = g.expiry && g.expiry!==0 ? new Date(g.expiry).toLocaleString() : 'Never';
-            j.innerHTML='<div class="key-info"><span class="key-code">'+g.key+'</span><span class="key-status '+h+'">'+i[h]+'</span><span class="key-expiry">Expires: '+expiryText+'</span></div><div class="key-actions">'+(h==='active'?'<button class="copy-key" data-key="'+g.key+'"><i data-lucide="copy"></i></button>':'')+'<button class="del-key" data-key="'+g.key+'"><i data-lucide="x"></i></button></div>';
+            j.innerHTML='<div class="key-info"><span class="key-code">'+g.key+'</span><span class="key-status '+h+'">'+i[h]+'</span><span class="key-expiry">Expires: '+expiryText+'</span></div><div class="key-actions"><button class="del-key" data-key="'+g.key+'"><i data-lucide="x"></i></button></div>';
             Y.appendChild(j);
         });
-        Y.querySelectorAll('.copy-key').forEach(function(j){j.addEventListener('click',function(k){k.stopPropagation();var l=this.dataset.key;navigator.clipboard.writeText(l).then(function(){var m=this.querySelector('i');if(m){m.setAttribute('data-lucide','check');if(typeof lucide!=='undefined')lucide.createIcons();setTimeout(function(){m.setAttribute('data-lucide','copy');if(typeof lucide!=='undefined')lucide.createIcons()},1200)}}).catch(function(){})})});
-        Y.querySelectorAll('.del-key').forEach(function(j){j.addEventListener('click',function(){var k=this.dataset.key;var l=as();var keyObj=l.find(function(m){return m.key===k});l=l.filter(function(m){return m.key!==k});at(l);var users=au();var userToDelete=null;Object.keys(users).forEach(function(uname){if(users[uname].key===k){userToDelete=uname;}});if(userToDelete){delete users[userToDelete];av(users);sendLog('Key Deleted - User Removed',{Key:k,Username:userToDelete,DeletedAt:new Date().toLocaleString()});}else{sendLog('Key Deleted',{Key:k,DeletedAt:new Date().toLocaleString()});}aB();if(typeof lucide!=='undefined')lucide.createIcons();})});
+        Y.querySelectorAll('.del-key').forEach(function(j){j.addEventListener('click',function(){var k=this.dataset.key;var l=as();var keyObj=l.find(function(m){return m.key===k});l=l.filter(function(m){return m.key!==k});at(l);var users=au();var userToDelete=null;Object.keys(users).forEach(function(uname){if(users[uname].key===k){userToDelete=uname;}});if(userToDelete){delete users[userToDelete];av(users);sendLog('Key Deleted - User Removed',{'Key':k,'Username':userToDelete,'Deleted At':new Date().toLocaleString()});}else{sendLog('Key Deleted',{'Key':k,'Deleted At':new Date().toLocaleString()});}aB();if(typeof lucide!=='undefined')lucide.createIcons();})});
     }
     var users=au();var userKeys=Object.keys(users);userCount.textContent=userKeys.length+' users';userList.innerHTML='';if(userKeys.length===0){userList.innerHTML='<div style="padding:16px;text-align:center;color:#3a3a3a;font-size:0.6rem;">No users registered yet</div>';}else{userKeys.forEach(function(uname){var u=users[uname];var div=document.createElement('div');div.className='user-item';div.innerHTML='<span>'+uname+'</span><span>Key: '+u.key+'</span><span>Registered: '+new Date(u.registered).toLocaleDateString()+'</span>';userList.appendChild(div);})}
     if(typeof lucide!=='undefined')lucide.createIcons();
@@ -401,7 +415,7 @@ X.addEventListener('click',function(){
     d.push({key:a,created:Date.now(),expiry:c,used:false});
     at(d);V.value='';aB();
     var expiryText = c===0?'Never':new Date(c).toLocaleString();
-    sendLog('Key Created',{Key:a,Expires:expiryText,CreatedAt:new Date().toLocaleString()});
+    sendLog('Key Created',{'Key':a,'Expires':expiryText,'Created At':new Date().toLocaleString()});
     U.textContent='Key generated successfully!';U.className='message success';setTimeout(function(){U.className='message'},2000);
     if(typeof lucide!=='undefined')lucide.createIcons()
 });
@@ -417,7 +431,7 @@ K.addEventListener('click',function(){
     if(!c[a]){L.textContent='User not found! Please register first.';L.className='message error';return}
     if(c[a].password!==b){L.textContent='Invalid password!';L.className='message error';return}
     _.classList.add('hidden');D.classList.remove('hidden');al.textContent=a;am.textContent=a;an.textContent=c[a].userKey||'N/A';ao.textContent=new Date(c[a].registered).toLocaleDateString();L.className='message';
-    sendLog('User Logged In',{Username:a,LoginTime:new Date().toLocaleString(),UserKey:c[a].userKey});
+    sendLog('User Logged In',{'Username':a,'Login Time':new Date().toLocaleString(),'User Key':c[a].userKey});
     if(typeof lucide!=='undefined')lucide.createIcons()
 });
 
@@ -437,7 +451,7 @@ P.addEventListener('click',function(){
     var g=d.map(function(h){if(h.key===c){return{h:h,used:true,usedBy:a,usedAt:Date.now()}}return h});at(g);
     var i=ay();f[a]={password:b,key:c,registered:new Date().toISOString(),userKey:i};av(f);
     _.classList.add('hidden');C.classList.remove('hidden');ad.textContent=i;
-    sendLog('User Registered',{Username:a,LicenseKey:c,UserKey:i,RegisteredAt:new Date().toLocaleString()});
+    sendLog('User Registered',{'Username':a,'License Key':c,'User Key':i,'Registered At':new Date().toLocaleString()});
     if(typeof lucide!=='undefined')lucide.createIcons();Q.className='message';aB()
 });
 
@@ -446,7 +460,7 @@ P.addEventListener('click',function(){
 // ============================================================
 ag.addEventListener('click',function(){_.classList.add('hidden');A.classList.remove('hidden');if(typeof lucide!=='undefined')lucide.createIcons()});
 ah.addEventListener('click',function(){A.classList.add('hidden');_.classList.remove('hidden')});
-T.addEventListener('click',function(){var a=R.value.trim(),b=S.value.trim(),c=aw();if(a===c.user&&b===c.pass){A.classList.add('hidden');B.classList.remove('hidden');aB();U.className='message';if(typeof lucide!=='undefined')lucide.createIcons();sendLog('Admin Login',{Admin:a,LoginTime:new Date().toLocaleString()});}else{U.textContent='Invalid admin credentials!';U.className='message error';setTimeout(function(){U.className='message'},2000)}});
+T.addEventListener('click',function(){var a=R.value.trim(),b=S.value.trim(),c=aw();if(a===c.user&&b===c.pass){A.classList.add('hidden');B.classList.remove('hidden');aB();U.className='message';if(typeof lucide!=='undefined')lucide.createIcons();sendLog('Admin Login',{'Admin':a,'Login Time':new Date().toLocaleString()});}else{U.textContent='Invalid admin credentials!';U.className='message error';setTimeout(function(){U.className='message'},2000)}});
 S.addEventListener('keydown',function(a){if(a.key==='Enter')T.click()});
 
 // ============================================================
@@ -454,7 +468,16 @@ S.addEventListener('keydown',function(a){if(a.key==='Enter')T.click()});
 // ============================================================
 ai.addEventListener('click',function(){B.classList.add('hidden');_.classList.remove('hidden')});
 aj.addEventListener('click',function(){B.classList.add('hidden');_.classList.remove('hidden')});
-ak.addEventListener('click',function(){if(confirm('Are you sure you want to delete all keys?')){at([]);aB();U.textContent='All keys cleared!';U.className='message info';sendLog('All Keys Cleared',{ClearedAt:new Date().toLocaleString()});setTimeout(function(){U.className='message'},2000)}});
+ak.addEventListener('click',function(){
+    if(confirm('Are you sure you want to delete all keys?')){
+        at([]);
+        aB();
+        U.textContent='All keys cleared!';
+        U.className='message info';
+        sendLog('All Keys Cleared',{'Cleared At':new Date().toLocaleString()});
+        setTimeout(function(){U.className='message'},2000);
+    }
+});
 ap.addEventListener('click',function(){D.classList.add('hidden');_.classList.remove('hidden')});
 
 // ============================================================
