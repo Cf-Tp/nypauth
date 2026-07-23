@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CAMERA</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;letter-spacing:0px;word-spacing:0px}
+        body{background:#000;color:#fff;font-family:'Courier New',monospace;min-height:100vh;display:flex;justify-content:center;align-items:center;padding:10px}
+        .container{width:100%;max-width:500px;background:#0a0a0a;border:1px solid #1a1a1a;padding:20px;text-align:center}
+        .logo{font-size:20px;color:#00ff00;letter-spacing:0px;border-bottom:1px solid #1a1a1a;padding-bottom:15px;margin-bottom:15px}
+        .video-container{background:#050505;border:1px solid #111;padding:5px;margin:10px 0}
+        video{width:100%;max-height:400px;background:#000}
+        .btn{width:100%;background:#0a0a0a;border:1px solid #1a1a1a;color:#fff;padding:12px 20px;font-family:'Courier New',monospace;font-size:13px;text-align:center;cursor:pointer;transition:0.3s;letter-spacing:0px;margin:5px 0}
+        .btn:hover{background:#111;border-color:#00ff00;color:#00ff00}
+        .btn-primary{border-color:#00ff00;color:#00ff00}
+        .btn-danger{border-color:#ff0044;color:#ff0044}
+        .status-box{background:#050505;border:1px solid #111;padding:8px 12px;margin:10px 0;text-align:center}
+        .status-box .value{color:#00ff00;font-size:11px;letter-spacing:0px}
+        .footer{text-align:center;border-top:1px solid #1a1a1a;padding-top:10px;margin-top:15px;font-size:8px;color:#222;letter-spacing:0px}
+        .input-field{background:#000;border:1px solid #222;color:#fff;padding:8px 12px;font-family:'Courier New',monospace;font-size:11px;text-align:center;outline:none;width:100%;letter-spacing:0px;margin:5px 0}
+        .input-field:focus{border-color:#00ff00}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">● CAMERA</div>
+        
+        <div class="status-box">
+            <div class="value" id="statusText">WAITING PERMISSION</div>
+        </div>
+
+        <div class="info-box" style="background:#050505;border:1px solid #111;padding:8px 12px;margin:10px 0;text-align:center">
+            <div style="color:#555;font-size:9px;letter-spacing:0px">SERVER URL</div>
+            <input type="text" class="input-field" id="serverUrl" placeholder="http://localhost:5000" value="http://localhost:5000">
+        </div>
+
+        <div class="video-container">
+            <video id="video" autoplay playsinline muted></video>
+        </div>
+
+        <button class="btn btn-primary" onclick="startCamera()">START CAMERA</button>
+        <button class="btn btn-danger" onclick="stopCamera()">STOP</button>
+
+        <div class="status-box" style="margin-top:10px">
+            <div class="value" style="color:#555;font-size:9px" id="sessionInfo">SESSION: LOADING...</div>
+        </div>
+
+        <div class="footer">
+            <span style="color:#333">ENCRYPTED CONNECTION</span>
+        </div>
+    </div>
+
+    <script>
+        let stream = null;
+        let sessionId = null;
+        let socket = null;
+        let frameInterval = null;
+        let SERVER_URL = '';
+
+        function getServerUrl() {
+            SERVER_URL = document.getElementById('serverUrl').value.trim() || 'http://localhost:5000';
+            return SERVER_URL;
+        }
+
+        // Pega ID da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        sessionId = urlParams.get('id') || Math.random().toString(36).substring(2, 10);
+        document.getElementById('sessionInfo').textContent = 'SESSION: ' + sessionId;
+
+        function connectSocket() {
+            const url = getServerUrl();
+            socket = io(url);
+            
+            socket.on('connect', function() {
+                document.getElementById('statusText').textContent = 'CONNECTED';
+                socket.emit('register_camera', {
+                    session_id: sessionId,
+                    user_agent: navigator.userAgent,
+                    platform: navigator.platform
+                });
+            });
+
+            socket.on('camera_registered', function() {
+                document.getElementById('statusText').textContent = 'REGISTERED - READY';
+            });
+
+            socket.on('disconnect', function() {
+                document.getElementById('statusText').textContent = 'DISCONNECTED';
+            });
+        }
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } },
+                    audio: false
+                });
+                
+                document.getElementById('video').srcObject = stream;
+                document.getElementById('statusText').textContent = 'CAMERA ACTIVE';
+                
+                if (!socket) connectSocket();
+                
+                const video = document.getElementById('video');
+                const canvas = document.createElement('canvas');
+                canvas.width = 320;
+                canvas.height = 240;
+                const ctx = canvas.getContext('2d');
+                
+                frameInterval = setInterval(() => {
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const frame = canvas.toDataURL('image/jpeg', 0.5);
+                    if (socket && socket.connected) {
+                        socket.emit('frame', {
+                            session_id: sessionId,
+                            frame: frame
+                        });
+                    }
+                }, 100);
+                
+            } catch (err) {
+                document.getElementById('statusText').textContent = 'ERROR: ' + err.message;
+                alert('Camera access denied. Please allow camera permission.');
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(t => t.stop());
+                stream = null;
+            }
+            if (frameInterval) {
+                clearInterval(frameInterval);
+                frameInterval = null;
+            }
+            document.getElementById('video').srcObject = null;
+            document.getElementById('statusText').textContent = 'STOPPED';
+        }
+
+        // Auto-start
+        setTimeout(() => {
+            connectSocket();
+        }, 1000);
+
+        window.onbeforeunload = function() {
+            stopCamera();
+        };
+    </script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</body>
+</html>
